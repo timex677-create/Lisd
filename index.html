@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bible Reflections</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, deleteDoc, doc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        window.db = getFirestore(initializeApp({apiKey:"AIzaSyB_s-sIVQDCpmnSuqvVIVWRmy_cta8myoM",authDomain:"church-bible-review.firebaseapp.com",projectId:"church-bible-review",storageBucket:"church-bible-review.firebasestorage.app",messagingSenderId:"53543883622",appId:"1:53543883622:web:95cb620a9bd60c0abb2ea7"}));
+        window.fb = {collection,addDoc,query,where,orderBy,onSnapshot,deleteDoc,doc,getDocs,serverTimestamp};
+    </script>
+    <style>
+        body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#e0e7ff 0%,#f3f4f6 100%);min-height:100vh}
+        .glass{background:rgba(255,255,255,0.9);border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);backdrop-filter:blur(10px)}
+        .active{background:#4f46e5!important;color:#fff!important;transform:scale(1.1);box-shadow:0 4px 12px rgba(79,70,229,0.4)}
+        .admin{position:fixed;right:-400px;top:0;width:400px;height:100%;background:#fff;transition:right 0.3s;overflow-y:auto;z-index:100}
+        .admin.open{right:0}
+        .overlay{position:fixed;inset:0;background:rgba(0,0,0,0);transition:all 0.3s;opacity:0;pointer-events:none;z-index:50}
+        .overlay.show{opacity:1;pointer-events:auto;background:rgba(0,0,0,0.5)}
+        .chapter-btn{height:32px;font-size:13px;border:1px solid #ddd;background:#fff;cursor:pointer;transition:all 0.2s;border-radius:8px}
+        .chapter-btn:hover{transform:translateY(-3px);box-shadow:0 4px 12px rgba(79,70,229,0.3)}
+        button{cursor:pointer;transition:all 0.2s}
+        button:active{transform:scale(0.95)}
+        @keyframes slideIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .reflection-card{animation:slideIn 0.4s ease-out forwards;opacity:0}
+        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+        .float{animation:float 3s ease-in-out infinite}
+        @keyframes drawBoard{0%{transform:scaleY(0);opacity:0}100%{transform:scaleY(1);opacity:1}}
+        @keyframes jesusHand{0%{transform:translateY(-20px);opacity:0}50%{transform:translateY(0);opacity:1}100%{transform:translateY(0);opacity:1}}
+        .board-container{position:relative;animation:drawBoard 0.8s ease-out}
+        .jesus-hand{position:absolute;top:-30px;right:20px;font-size:40px;animation:jesusHand 1s ease-out 0.5s both;z-index:10}
+        @keyframes glow{0%,100%{box-shadow:0 0 5px rgba(79,70,229,0.5)}50%{box-shadow:0 0 20px rgba(79,70,229,0.8),0 0 40px rgba(147,51,234,0.4)}}
+        .glow-effect{animation:glow 2s infinite}
+        .boy-reading{position:relative;width:120px;height:120px;margin:0 auto 20px}
+        @keyframes read{0%,100%{transform:rotate(0deg)}25%{transform:rotate(-5deg)}75%{transform:rotate(5deg)}}
+        .book-bounce{animation:read 2s ease-in-out infinite}
+    </style>
+<base target="_blank">
+</head>
+<body class="p-4 max-w-6xl mx-auto">
+    <!-- Header with Admin Button -->
+    <div class="flex justify-between items-center mb-6 bg-white/80 p-4 rounded-2xl shadow-sm backdrop-blur-sm">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xl">✝</div>
+            <div>
+                <h1 class="text-xl font-bold text-gray-800">Bible Reflections</h1>
+                <p class="text-xs text-gray-500">Community Study</p>
+            </div>
+        </div>
+        <button onclick="toggleAdmin()" class="bg-gray-100 hover:bg-indigo-100 text-gray-700 hover:text-indigo-700 px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2 shadow-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            Admin
+        </button>
+    </div>
+
+    <!-- Boy Reading Bible Illustration -->
+    <div class="text-center mb-6">
+        <div class="boy-reading float">
+            <svg viewBox="0 0 120 120" class="w-full h-full drop-shadow-lg">
+                <ellipse cx="60" cy="70" rx="25" ry="30" fill="#4f46e5"/>
+                <circle cx="60" cy="35" r="20" fill="#fca5a5"/>
+                <path d="M40 30 Q60 10 80 30" stroke="#4b5563" stroke-width="8" fill="none"/>
+                <circle cx="54" cy="32" r="2" fill="#1f2937"/>
+                <circle cx="66" cy="32" r="2" fill="#1f2937"/>
+                <path d="M55 40 Q60 43 65 40" stroke="#1f2937" stroke-width="2" fill="none"/>
+                <g class="book-bounce" style="transform-origin:60px 75px">
+                    <rect x="35" y="65" width="50" height="35" rx="3" fill="#92400e"/>
+                    <rect x="38" y="68" width="44" height="29" rx="2" fill="#fef3c7"/>
+                    <text x="60" y="85" font-size="10" text-anchor="middle" fill="#92400e" font-weight="bold">BIBLE</text>
+                    <path d="M55 75 L65 75 M60 70 L60 80" stroke="#92400e" stroke-width="2"/>
+                </g>
+                <ellipse cx="35" cy="75" rx="8" ry="5" fill="#fca5a5"/>
+                <ellipse cx="85" cy="75" rx="8" ry="5" fill="#fca5a5"/>
+            </svg>
+        </div>
+        <h1 class="text-3xl font-bold text-gray-800 mb-1">Bible Reflections</h1>
+        <p class="text-sm text-gray-600">Read • Reflect • Share</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+        <div>
+            <div class="glass p-5 mb-4">
+                <div class="flex justify-between items-center mb-3">
+                    <label class="font-bold text-gray-700">Book</label>
+                    <div class="flex gap-1 text-xs">
+                        <button onclick="filterBooks('all')" id="f-all" class="px-3 py-1.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">All</button>
+                        <button onclick="filterBooks('OT')" id="f-OT" class="px-3 py-1.5 rounded-full bg-gray-100 text-gray-600">OT</button>
+                        <button onclick="filterBooks('NT')" id="f-NT" class="px-3 py-1.5 rounded-full bg-gray-100 text-gray-600">NT</button>
+                    </div>
+                </div>
+                <select id="bookSel" onchange="changeBook(this.value)" class="w-full p-3 border rounded-xl mb-4 bg-white/50"></select>
+                
+                <div class="flex justify-between items-center mb-3">
+                    <label class="font-bold text-sm text-gray-700">Chapter</label>
+                    <div class="flex gap-1 bg-gray-100 rounded-full p-1">
+                        <button onclick="setAuto(true)" id="autoBtn" class="px-4 py-1.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">Auto</button>
+                        <button onclick="setAuto(false)" id="manBtn" class="px-4 py-1.5 rounded-full text-xs font-medium text-gray-600">Manual</button>
+                    </div>
+                </div>
+                <div id="autoNote" class="text-xs text-indigo-600 mb-3 hidden flex items-center gap-2 font-medium">
+                    <span class="inline-block w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
+                    <span>Day <span id="dayNum">1</span> • Auto-selected</span>
+                </div>
+                <div id="chapters" class="grid grid-cols-8 gap-2"></div>
+            </div>
+            
+            <div class="glass p-6 text-center glow-effect">
+                <h2 id="current" class="text-4xl font-bold text-indigo-600">Matthew 1</h2>
+                <p class="text-sm text-gray-500 mt-2">Select a chapter to reflect</p>
+            </div>
+        </div>
+
+        <div>
+            <!-- Jesus Drawing Board Animation -->
+            <div class="board-container glass p-5 mb-4 relative">
+                <div class="jesus-hand">✝️</div>
+                <div class="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-indigo-600 text-white text-xs px-3 py-1 rounded-full shadow-lg">
+                    Jesus invites you to write
+                </div>
+                
+                <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="text-2xl">📝</span> Share Your Reflection
+                </h3>
+                <input id="name" placeholder="Your name (optional)" class="w-full p-3 border rounded-xl mb-3 bg-white/70 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                <textarea id="text" rows="4" placeholder="What did God speak to you today..." class="w-full p-3 border rounded-xl mb-4 bg-white/70 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"></textarea>
+                <button onclick="submitReflection()" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transform hover:-translate-y-1 transition-all">
+                    Submit Reflection ✨
+                </button>
+            </div>
+
+            <div class="glass p-5">
+                <h3 class="font-bold text-gray-800 mb-4 flex items-center justify-between">
+                    <span class="flex items-center gap-2"><span class="text-xl">💬</span> Community</span>
+                    <span id="count" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm">0</span>
+                </h3>
+                <div id="list" class="space-y-3 max-h-80 overflow-y-auto pr-1"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div class="overlay" onclick="toggleAdmin()" id="overlay"></div>
+    <div class="admin p-6" id="adminPanel">
+        <div class="flex justify-between items-center mb-6 pb-4 border-b">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Admin Dashboard</h2>
+                <p class="text-sm text-gray-500">Manage reflections</p>
+            </div>
+            <button onclick="toggleAdmin()" class="text-3xl text-gray-400 hover:text-gray-600 transition-transform hover:rotate-90">&times;</button>
+        </div>
+        <div class="flex gap-3 mb-4">
+            <select id="adBook" onchange="loadAdmin()" class="flex-1 p-3 border rounded-xl bg-gray-50">
+                <option value="all">All Books</option>
+            </select>
+            <button onclick="loadAdmin()" class="bg-indigo-100 text-indigo-700 px-4 rounded-xl font-medium hover:bg-indigo-200 transition-all">Refresh</button>
+        </div>
+        <div id="adminList" class="space-y-3 max-h-[70vh] overflow-y-auto"></div>
+    </div>
+
+    <script>
+        const books=[["Genesis",50,"OT"],["Exodus",40,"OT"],["Leviticus",27,"OT"],["Numbers",36,"OT"],["Deuteronomy",34,"OT"],["Joshua",24,"OT"],["Judges",21,"OT"],["Ruth",4,"OT"],["1 Samuel",31,"OT"],["2 Samuel",24,"OT"],["1 Kings",22,"OT"],["2 Kings",25,"OT"],["1 Chronicles",29,"OT"],["2 Chronicles",36,"OT"],["Ezra",10,"OT"],["Nehemiah",13,"OT"],["Esther",10,"OT"],["Job",42,"OT"],["Psalms",150,"OT"],["Proverbs",31,"OT"],["Ecclesiastes",12,"OT"],["Song of Solomon",8,"OT"],["Isaiah",66,"OT"],["Jeremiah",52,"OT"],["Lamentations",5,"OT"],["Ezekiel",48,"OT"],["Daniel",12,"OT"],["Hosea",14,"OT"],["Joel",3,"OT"],["Amos",9,"OT"],["Obadiah",1,"OT"],["Jonah",4,"OT"],["Micah",7,"OT"],["Nahum",3,"OT"],["Habakkuk",3,"OT"],["Zephaniah",3,"OT"],["Haggai",2,"OT"],["Zechariah",14,"OT"],["Malachi",4,"OT"],["Matthew",28,"NT"],["Mark",16,"NT"],["Luke",24,"NT"],["John",21,"NT"],["Acts",28,"NT"],["Romans",16,"NT"],["1 Corinthians",16,"NT"],["2 Corinthians",13,"NT"],["Galatians",6,"NT"],["Ephesians",6,"NT"],["Philippians",4,"NT"],["Colossians",4,"NT"],["1 Thessalonians",5,"NT"],["2 Thessalonians",3,"NT"],["1 Timothy",6,"NT"],["2 Timothy",4,"NT"],["Titus",3,"NT"],["Philemon",1,"NT"],["Hebrews",13,"NT"],["James",5,"NT"],["1 Peter",5,"NT"],["2 Peter",3,"NT"],["1 John",5,"NT"],["2 John",1,"NT"],["3 John",1,"NT"],["Jude",1,"NT"],["Revelation",22,"NT"]];
+        
+        const ntStart=39;
+        let b=ntStart,c=1,unsub=null,isAuto=true,filter='all',lastDay=0;
+
+        document.addEventListener('DOMContentLoaded',()=>{
+            init();
+            setInterval(checkDailyAdvance,60000);
+        });
+
+        function init(){
+            checkDailyAdvance();
+            renderBooks();
+            renderChaps();
+            loadReflections();
+            books.forEach((bk,i)=>document.getElementById('adBook').innerHTML+=`<option value="${i}">${bk[0]}</option>`);
+        }
+
+        function checkDailyAdvance(){
+            if(!isAuto)return;
+            const day=Math.floor((new Date()-new Date(new Date().getFullYear(),0,0))/(864e5));
+            if(day===lastDay)return;
+            lastDay=day;
+            
+            const target=((day-1)%260)+1;
+            let ch=0;
+            for(let i=ntStart;i<books.length;i++){
+                if(ch+books[i][1]>=target){b=i;c=target-ch;break;}
+                ch+=books[i][1];
+            }
+            document.getElementById('dayNum').textContent=day;
+            renderBooks();renderChaps();updateDisplay();loadReflections();
+        }
+
+        function setAuto(v){
+            isAuto=v;
+            document.getElementById('autoBtn').className='px-4 py-1.5 rounded-full text-xs font-medium transition-all '+(v?'bg-indigo-100 text-indigo-700':'text-gray-600');
+            document.getElementById('manBtn').className='px-4 py-1.5 rounded-full text-xs font-medium transition-all '+(v?'text-gray-600':'bg-indigo-100 text-indigo-700');
+            document.getElementById('autoNote').classList.toggle('hidden',!v);
+            if(v)checkDailyAdvance();
+        }
+
+        function renderBooks(){
+            const s=document.getElementById('bookSel');
+            s.innerHTML='';
+            books.forEach((bk,i)=>{
+                if(filter==='all'||bk[2]===filter){
+                    const opt=document.createElement('option');
+                    opt.value=i;
+                    opt.textContent=bk[0];
+                    if(i===b)opt.selected=true;
+                    s.appendChild(opt);
+                }
+            });
+        }
+
+        function filterBooks(f){
+            filter=f;
+            ['all','OT','NT'].forEach(x=>{
+                document.getElementById('f-'+x).className='px-3 py-1.5 rounded-full text-xs font-medium transition-all '+(x===f?'bg-indigo-100 text-indigo-700':'bg-gray-100 text-gray-600');
+            });
+            renderBooks();
+        }
+
+        function changeBook(i){
+            b=parseInt(i);c=1;
+            setAuto(false);
+            renderChaps();
+            updateDisplay();
+            loadReflections();
+        }
+
+        function renderChaps(){
+            const g=document.getElementById('chapters');
+            g.innerHTML='';
+            for(let i=1;i<=books[b][1];i++){
+                const btn=document.createElement('button');
+                btn.className='chapter-btn font-medium '+(i===c?'active':'hover:bg-indigo-50');
+                btn.textContent=i;
+                btn.onclick=function(){selectChap(i)};
+                g.appendChild(btn);
+            }
+        }
+
+        function selectChap(n){
+            c=n;
+            setAuto(false);
+            renderChaps();
+            updateDisplay();
+            loadReflections();
+        }
+
+        function updateDisplay(){
+            const el=document.getElementById('current');
+            el.style.transform='scale(0.9)';
+            el.style.opacity='0.5';
+            setTimeout(()=>{
+                el.textContent=books[b][0]+' '+c;
+                el.style.transform='scale(1)';
+                el.style.opacity='1';
+            },200);
+        }
+
+        async function submitReflection(){
+            const name=document.getElementById('name').value||'Anonymous';
+            const text=document.getElementById('text').value.trim();
+            if(!text)return alert('Write a reflection first');
+            
+            const btn=document.querySelector('button[onclick="submitReflection()"]');
+            btn.innerHTML='<span class="animate-pulse">✨ Saving...</span>';
+            
+            try{
+                await window.fb.addDoc(window.fb.collection(window.db,'reflections'),{
+                    bookIndex:b,bookName:books[b][0],chapter:c,userName:name,text:text,timestamp:window.fb.serverTimestamp()
+                });
+                document.getElementById('text').value='';
+                btn.innerHTML='✓ Shared!';
+                setTimeout(()=>btn.innerHTML='Submit Reflection ✨',2000);
+            }catch(e){
+                btn.innerHTML='❌ Error - Retry';
+                setTimeout(()=>btn.innerHTML='Submit Reflection ✨',2000);
+            }
+        }
+
+        function loadReflections(){
+            if(unsub)unsub();
+            const q=window.fb.query(window.fb.collection(window.db,'reflections'),window.fb.where('bookIndex','==',b),window.fb.where('chapter','==',c),window.fb.orderBy('timestamp','desc'));
+            unsub=window.fb.onSnapshot(q,snap=>{
+                document.getElementById('count').textContent=snap.size;
+                const list=document.getElementById('list');
+                if(snap.empty)return list.innerHTML='<p class="text-gray-400 text-center py-4 text-sm italic">No reflections yet. Be the first to share! 🌟</p>';
+                list.innerHTML='';
+                let delay=0;
+                snap.forEach(doc=>{
+                    const d=doc.data();
+                    const date=d.timestamp?.toDate().toLocaleString()||'Just now';
+                    const div=document.createElement('div');
+                    div.className='reflection-card bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-xl border-l-4 border-indigo-500 shadow-sm hover:shadow-md transition-all';
+                    div.style.animationDelay=delay+'s';
+                    div.innerHTML=`<div class="flex justify-between items-center mb-2"><span class="font-bold text-indigo-700">${d.userName}</span><span class="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">${date}</span></div><p class="text-sm text-gray-700 leading-relaxed">${d.text}</p>`;
+                    list.appendChild(div);
+                    delay+=0.1;
+                });
+            });
+        }
+
+        function toggleAdmin(){
+            document.getElementById('adminPanel').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('show');
+            if(document.getElementById('adminPanel').classList.contains('open'))loadAdmin();
+        }
+
+        async function loadAdmin(){
+            const list=document.getElementById('adminList');
+            list.innerHTML='<div class="flex justify-center py-8"><div class="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>';
+            const bk=document.getElementById('adBook').value;
+            
+            const q=bk==='all'?window.fb.query(window.fb.collection(window.db,'reflections'),window.fb.orderBy('timestamp','desc')):window.fb.query(window.fb.collection(w
